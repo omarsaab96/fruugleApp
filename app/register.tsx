@@ -5,20 +5,34 @@ import { useTranslation } from 'react-i18next';
 import { Image, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, useColorScheme, View } from 'react-native';
 
 
-export default function IndexScreen() {
+export default function RegisterScreen() {
     const router = useRouter();
     let colorScheme = useColorScheme();
     const styles = styling(colorScheme)
+    const [name, setName] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
 
+    const [nameTouched, setNameTouched] = useState(false);
     const [emailTouched, setEmailTouched] = useState(false);
     const [passwordTouched, setPasswordTouched] = useState(false);
 
+    const [nameError, setNameError] = useState(true);
     const [emailError, setEmailError] = useState(true);
     const [passwordError, setPasswordError] = useState(true);
 
     const [respError, setRespError] = useState("");
+
+    const checkName = (preferredname: string) => {
+        let name = preferredname.trim();
+        setName(name);
+
+        if (name == "") {
+            setNameError(true)
+        } else {
+            setNameError(false)
+        }
+    };
 
     const checkEmail = (emailaddress: string) => {
         let email = emailaddress.trim();
@@ -30,39 +44,35 @@ export default function IndexScreen() {
         } else {
             setEmailError(false)
         }
-
-        console.log(email != "", regex.test(email))
     };
 
     const checkPassword = (password: string) => {
         let pass = password.trim()
         setPassword(pass)
 
-        // if (pass == "" || pass.length < 8) {
-        //     console.log("Min 8 chars")
-        //     setPasswordError(true)
-        //     return;
-        // }
+        if (pass == "" || pass.length < 8) {
+            console.log("Min 8 chars")
+            setPasswordError(true)
+            return;
+        }
 
-        // let hasLetter = false;
-        // let hasNumber = false;
+        let hasLetter = false;
+        let hasNumber = false;
 
-        // for (let i = 0; i < pass.length; i++) {
-        //     const char = pass[i];
-        //     if ((char >= 'A' && char <= 'Z') || (char >= 'a' && char <= 'z')) {
-        //         hasLetter = true;
-        //     } else if (char >= '0' && char <= '9') {
-        //         hasNumber = true;
-        //     }
-        // }
+        for (let i = 0; i < pass.length; i++) {
+            const char = pass[i];
+            if ((char >= 'A' && char <= 'Z') || (char >= 'a' && char <= 'z')) {
+                hasLetter = true;
+            } else if (char >= '0' && char <= '9') {
+                hasNumber = true;
+            }
+        }
 
-        // if (!hasLetter || !hasNumber) {
-        //     console.log('should have letters and numbers');
-        //     setPasswordError(true)
-        //     return;
-        // }
-
-        // console.log('pass OK')
+        if (!hasLetter || !hasNumber) {
+            console.log('should have letters and numbers');
+            setPasswordError(true)
+            return;
+        }
         setPasswordError(false)
     };
 
@@ -76,7 +86,7 @@ export default function IndexScreen() {
     //     }
     // }
 
-    const handleLogin = () => {
+    const handleRegister = () => {
         setRespError("No API")
     }
 
@@ -96,11 +106,17 @@ export default function IndexScreen() {
             behavior={Platform.OS === "ios" ? "padding" : "height"}
             style={styles.container}
         >
+            <TouchableOpacity style={styles.backBtn} onPress={() => { router.back() }}>
+                <Image source={require('../assets/images/back.png')} style={styles.back} />
+            </TouchableOpacity>
             <ScrollView
                 contentContainerStyle={styles.scrollContainer}
                 keyboardShouldPersistTaps="handled"
             >
-                <Text style={styles.title}>{t('login')}</Text>
+                <View>
+                    <Text style={styles.title}>{t('registerTitle')}</Text>
+                    <Text style={styles.subtitle}>{t('registerInstruction')}</Text>
+                </View>
 
                 <Image
                     style={styles.image}
@@ -112,6 +128,21 @@ export default function IndexScreen() {
                         <MaterialIcons name="error-outline" size={18} color="red" />
                         <Text style={styles.respErrorText}>{respError}</Text>
                     </View>}
+
+                    <View style={styles.inputEntity}>
+                        {nameError && nameTouched && <MaterialIcons name="error-outline" size={28} color="red" style={styles.error} />}
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Preferred Name"
+                            placeholderTextColor="#707070"
+                            keyboardType="default"
+                            value={name}
+                            onChangeText={(text => { checkName(text) })}
+                            autoCapitalize="none"
+                            onBlur={() => setNameTouched(true)}
+                        />
+                    </View>
+
                     <View style={styles.inputEntity}>
                         {emailError && emailTouched && <MaterialIcons name="error-outline" size={28} color="red" style={styles.error} />}
                         <TextInput
@@ -127,7 +158,7 @@ export default function IndexScreen() {
                     </View>
 
                     <View style={styles.inputEntity}>
-                        {/* {passwordError && passwordTouched && <MaterialIcons name="error-outline" size={28} color="red" style={styles.error} />} */}
+                        {passwordError && passwordTouched && <MaterialIcons name="error-outline" size={28} color="red" style={styles.error} />}
                         <TextInput
                             style={styles.input}
                             placeholder="Password"
@@ -139,22 +170,22 @@ export default function IndexScreen() {
                         />
                     </View>
 
-                    <TouchableOpacity style={[styles.button, (emailError || passwordError) && { backgroundColor: '#707070' }]} onPress={() => handleLogin()} disabled={(emailError || passwordError)}>
-                        <Text style={styles.buttonText}>Login</Text>
+                    <TouchableOpacity style={[styles.button, (nameError || emailError || passwordError) && { backgroundColor: '#707070' }]} onPress={() => handleRegister()} disabled={(nameError || emailError || passwordError)}>
+                        <Text style={styles.buttonText}>{t('registerCTA')}</Text>
                     </TouchableOpacity>
 
-                    <TouchableOpacity style={styles.forgot}>
+                    {/* <TouchableOpacity style={styles.forgot}>
                         <Text style={styles.forgotText}>Reset Password</Text>
-                    </TouchableOpacity>
+                    </TouchableOpacity> */}
                 </View>
 
-                <View style={styles.registerContainer}>
-                    <TouchableOpacity style={styles.registerBtn} onPress={()=>{router.push("/register")}}>
+                {/* <View style={styles.registerContainer}>
+                    <TouchableOpacity style={styles.registerBtn}>
                         <Text style={styles.registerText}>New to the App?</Text>
                         <Text style={styles.registerLink}>Register</Text>
                         <Text style={styles.registerText}>here</Text>
                     </TouchableOpacity>
-                </View>
+                </View> */}
             </ScrollView>
         </KeyboardAvoidingView>
 
@@ -182,6 +213,12 @@ const styling = (colorScheme: string) =>
             color: colorScheme === 'dark' ? '#fff' : '#000',
             textTransform: 'uppercase',
             textAlign: 'center'
+        },
+        subtitle: {
+            fontSize: 16,
+            color: colorScheme === 'dark' ? '#fff' : '#000',
+            textAlign: 'center',
+            paddingTop: 16
         },
         image: {
             width: 210,
@@ -259,13 +296,24 @@ const styling = (colorScheme: string) =>
             paddingVertical: 5,
             paddingHorizontal: 10,
             borderRadius: 10,
-            flexDirection:'row',
-            alignItems:'center',
-            gap:10
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 10
         },
         respErrorText: {
             color: 'red',
             fontFamily: 'Avenir',
             fontSize: 14,
+        },
+        backBtn: {
+            position: 'absolute',
+            top: Platform.OS == 'ios' ? 60 : 40,
+            left: 20,
+            zIndex: 1,
+        },
+        back: {
+            width: 11,
+            height: 20,
+            objectFit: 'contain'
         }
     });

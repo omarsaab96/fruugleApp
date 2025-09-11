@@ -1,5 +1,7 @@
 {
-  "welcome": "Welcome to Fruggle",
+  "splashText": "Your Smart Grocery Shopping Assistant",
   "login": "Login",
-  "signup": "Sign Up"
+  "registerTitle": "USER REGISTRATION",
+  "registerInstruction":"Please fill in the details to proceed",
+  "registerCTA":"Register"
 }
