@@ -25,6 +25,10 @@ export default function IndexScreen() {
                 <Text>{i18n.language == 'en' ? 'italian' : 'english'}</Text>
             </TouchableOpacity>
 
+             <TouchableOpacity onPress={() => { router.push('splash') }}>
+                <Text>splash screen</Text>
+            </TouchableOpacity>
+
             <Text>{t('welcome')}</Text>
         </View>
     );
