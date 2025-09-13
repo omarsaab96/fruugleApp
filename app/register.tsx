@@ -1,9 +1,11 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useRouter } from 'expo-router';
+import * as SecureStore from 'expo-secure-store';
 import React, { useState } from "react";
 import { useTranslation } from 'react-i18next';
 import { Image, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, useColorScheme, View } from 'react-native';
 
+const API_URL = "http://10.0.2.2:5015/api";
 
 export default function RegisterScreen() {
     const router = useRouter();
@@ -21,6 +23,7 @@ export default function RegisterScreen() {
     const [emailError, setEmailError] = useState(true);
     const [passwordError, setPasswordError] = useState(true);
 
+    const [registering, setRegistering] = useState(false);
     const [respError, setRespError] = useState("");
 
     const checkName = (preferredname: string) => {
@@ -86,8 +89,70 @@ export default function RegisterScreen() {
     //     }
     // }
 
-    const handleRegister = () => {
-        setRespError("No API")
+    const handleRegister = async () => {
+        setRegistering(true)
+        try {
+            const url = `${API_URL}/users/Auth`;
+
+            const response = await fetch(url, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "accept": "application/json"
+                },
+                body: JSON.stringify({
+                    "username": name,
+                    "email": email,
+                    "password": password,
+                    "PasswordConfirm": password,
+                    "termsAndConditions": true,
+                    "localityId": 1
+                }),
+            });
+
+            if (!response.ok) {
+                throw new Error("Failed to register user");
+            }
+
+            const data = await response.json();
+            await SecureStore.setItemAsync('userID', data);
+            loginUser();
+        } catch (error) {
+            setRegistering(false)
+            setRespError("An error occured. Please try again");
+            console.error("Register error:", error.message);
+        }
+    }
+
+    const loginUser = async () => {
+        try {
+            const url = `${API_URL}/users/Auth/login`;
+
+            const response = await fetch(url, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "accept": "application/json"
+                },
+                body: JSON.stringify({
+                    "username": email,
+                    "password": password,
+                }),
+            });
+
+            if (!response.ok) {
+                throw new Error("Failed to register user");
+            }
+
+            const data = await response.json();
+            await SecureStore.setItemAsync('token', data.token_type + " " + data.access_token);
+            console.log(data.token_type + " " + data.access_token)
+            router.replace("/landing")
+        } catch (error) {
+            setRegistering(false)
+            setRespError("An error occured. Please try again");
+            console.error("Register error:", error.message);
+        }
     }
 
     return (
@@ -164,6 +229,7 @@ export default function RegisterScreen() {
                             placeholder="Password"
                             placeholderTextColor="#707070"
                             secureTextEntry
+                            autoCapitalize='none'
                             value={password}
                             onChangeText={(text => { checkPassword(text) })}
                             onBlur={() => setPasswordTouched(true)}
