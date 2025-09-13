@@ -263,7 +263,7 @@ const styling = (colorScheme: string) =>
     StyleSheet.create({
         container: {
             flex: 1,
-            backgroundColor: '#fff',
+            backgroundColor: colorScheme === 'dark' ? '#121212' : '#fff',
             paddingBottom: Platform.OS == 'ios' ? 30 : 40,
             paddingTop: Platform.OS == 'ios' ? 60 : 30
 
