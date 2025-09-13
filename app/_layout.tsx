@@ -6,7 +6,6 @@ import React, { useEffect, useState } from "react";
 import { useColorScheme } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import '../i18n';
-import AppSplash from "./splash";
 
 // Keep splash screen visible until fonts are loaded
 SplashScreen.preventAutoHideAsync();
@@ -25,10 +24,6 @@ export default function RootLayout() {
         });
 
         await SplashScreen.hideAsync();
-
-        // Simulate API call / network delay
-        await new Promise(resolve => setTimeout(resolve, 3000)); // 3 seconds
-
       } catch (e) {
         console.warn(e);
       } finally {
@@ -40,7 +35,7 @@ export default function RootLayout() {
   }, []);
 
   if (loading) {
-    return <AppSplash />;
+    return null;
   }
 
   return (

@@ -3,39 +3,23 @@ import { useRouter } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import React, { useState } from "react";
 import { useTranslation } from 'react-i18next';
-import { Image, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, useColorScheme, View } from 'react-native';
+import { ActivityIndicator, Image, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, useColorScheme, View } from 'react-native';
 
 const API_URL = "http://10.0.2.2:5015/api";
 
-export default function RegisterScreen() {
+export default function LoginScreen() {
     const router = useRouter();
     let colorScheme = useColorScheme();
     const styles = styling(colorScheme)
-    const [name, setName] = useState("");
+
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
 
-    const [nameTouched, setNameTouched] = useState(false);
     const [emailTouched, setEmailTouched] = useState(false);
-    const [passwordTouched, setPasswordTouched] = useState(false);
-
-    const [nameError, setNameError] = useState(true);
     const [emailError, setEmailError] = useState(true);
-    const [passwordError, setPasswordError] = useState(true);
 
-    const [registering, setRegistering] = useState(false);
+    const [loggingIn, setLoggingIn] = useState(false);
     const [respError, setRespError] = useState("");
-
-    const checkName = (preferredname: string) => {
-        let name = preferredname.trim();
-        setName(name);
-
-        if (name == "") {
-            setNameError(true)
-        } else {
-            setNameError(false)
-        }
-    };
 
     const checkEmail = (emailaddress: string) => {
         let email = emailaddress.trim();
@@ -49,34 +33,6 @@ export default function RegisterScreen() {
         }
     };
 
-    const checkPassword = (password: string) => {
-        let pass = password.trim()
-        setPassword(pass)
-
-        if (pass == "" || pass.length < 8) {
-            setPasswordError(true)
-            return;
-        }
-
-        let hasLetter = false;
-        let hasNumber = false;
-
-        for (let i = 0; i < pass.length; i++) {
-            const char = pass[i];
-            if ((char >= 'A' && char <= 'Z') || (char >= 'a' && char <= 'z')) {
-                hasLetter = true;
-            } else if (char >= '0' && char <= '9') {
-                hasNumber = true;
-            }
-        }
-
-        if (!hasLetter || !hasNumber) {
-            setPasswordError(true)
-            return;
-        }
-        setPasswordError(false)
-    };
-
     const { t } = useTranslation();
 
     // const switchLanguage = () => {
@@ -87,42 +43,8 @@ export default function RegisterScreen() {
     //     }
     // }
 
-    const handleRegister = async () => {
-        setRegistering(true)
-        try {
-            const url = `${API_URL}/users/Auth`;
-
-            const response = await fetch(url, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "accept": "application/json"
-                },
-                body: JSON.stringify({
-                    "username": name,
-                    "email": email,
-                    "password": password,
-                    "PasswordConfirm": password,
-                    "termsAndConditions": true,
-                    "localityId": 1
-                }),
-            });
-
-            if (!response.ok) {
-                throw new Error("Failed to register user");
-            }
-
-            const data = await response.json();
-            await SecureStore.setItemAsync('userID', JSON.stringify(data));
-            loginUser();
-        } catch (error) {
-            setRegistering(false)
-            setRespError("An error occured. Please try again");
-            console.error("Register error:", error.message);
-        }
-    }
-
-    const loginUser = async () => {
+    const handleLogin = async () => {
+        setLoggingIn(true)
         try {
             const url = `${API_URL}/users/Auth/login`;
 
@@ -138,23 +60,22 @@ export default function RegisterScreen() {
                 }),
             });
 
+
             if (!response.ok) {
-                throw new Error("Failed to register user");
+                throw new Error("Failed to login user");
             }
 
             const data = await response.json();
             await SecureStore.setItemAsync('token', data.token_type + " " + data.access_token);
             await SecureStore.setItemAsync('refresh_token', data.refresh_token);
             await SecureStore.setItemAsync('email_verified', data.email_verified.toString());
-
             router.replace("/landing")
         } catch (error) {
-            setRegistering(false)
-            setRespError("An error occured. Please try again");
-            console.error("Register error:", error.message);
+            setLoggingIn(false)
+            setRespError("Login failed");
+            console.error("Login error:", error.message);
         }
     }
-
     return (
         // <View style={styles.appContainer}>
         //     <TouchableOpacity onPress={() => { switchLanguage() }}>
@@ -171,17 +92,11 @@ export default function RegisterScreen() {
             behavior={Platform.OS === "ios" ? "padding" : "height"}
             style={styles.container}
         >
-            <TouchableOpacity style={styles.backBtn} onPress={() => { router.back() }}>
-                <Image source={require('../assets/images/back.png')} style={styles.back} />
-            </TouchableOpacity>
             <ScrollView
                 contentContainerStyle={styles.scrollContainer}
                 keyboardShouldPersistTaps="handled"
             >
-                <View>
-                    <Text style={styles.title}>{t('registerTitle')}</Text>
-                    <Text style={styles.subtitle}>{t('registerInstruction')}</Text>
-                </View>
+                <Text style={styles.title}>{t('login')}</Text>
 
                 <Image
                     style={styles.image}
@@ -193,21 +108,6 @@ export default function RegisterScreen() {
                         <MaterialIcons name="error-outline" size={18} color="red" />
                         <Text style={styles.respErrorText}>{respError}</Text>
                     </View>}
-
-                    <View style={styles.inputEntity}>
-                        {nameError && nameTouched && <MaterialIcons name="error-outline" size={28} color="red" style={styles.error} />}
-                        <TextInput
-                            style={styles.input}
-                            placeholder="Preferred Name"
-                            placeholderTextColor="#707070"
-                            keyboardType="default"
-                            value={name}
-                            onChangeText={(text => { checkName(text) })}
-                            autoCapitalize="none"
-                            onBlur={() => setNameTouched(true)}
-                        />
-                    </View>
-
                     <View style={styles.inputEntity}>
                         {emailError && emailTouched && <MaterialIcons name="error-outline" size={28} color="red" style={styles.error} />}
                         <TextInput
@@ -223,7 +123,6 @@ export default function RegisterScreen() {
                     </View>
 
                     <View style={styles.inputEntity}>
-                        {passwordError && passwordTouched && <MaterialIcons name="error-outline" size={28} color="red" style={styles.error} />}
                         <TextInput
                             style={styles.input}
                             placeholder="Password"
@@ -231,27 +130,27 @@ export default function RegisterScreen() {
                             secureTextEntry
                             autoCapitalize='none'
                             value={password}
-                            onChangeText={(text => { checkPassword(text) })}
-                            onBlur={() => setPasswordTouched(true)}
+                            onChangeText={setPassword}
                         />
                     </View>
 
-                    <TouchableOpacity style={[styles.button, (nameError || emailError || passwordError) && { backgroundColor: '#707070' }]} onPress={() => handleRegister()} disabled={(nameError || emailError || passwordError)}>
-                        <Text style={styles.buttonText}>{t('registerCTA')}</Text>
+                    <TouchableOpacity style={[styles.button, (emailError) && { backgroundColor: '#707070' }]} onPress={() => handleLogin()} disabled={(emailError)}>
+                        <Text style={styles.buttonText}>{loggingIn ? 'Logging in' : 'Login'}</Text>
+                        {loggingIn && <ActivityIndicator size='small' color='#fff' />}
                     </TouchableOpacity>
 
-                    {/* <TouchableOpacity style={styles.forgot}>
+                    <TouchableOpacity style={styles.forgot}>
                         <Text style={styles.forgotText}>Reset Password</Text>
-                    </TouchableOpacity> */}
+                    </TouchableOpacity>
                 </View>
 
-                {/* <View style={styles.registerContainer}>
-                    <TouchableOpacity style={styles.registerBtn}>
+                <View style={styles.registerContainer}>
+                    <TouchableOpacity style={styles.registerBtn} onPress={() => { router.push("/register") }}>
                         <Text style={styles.registerText}>New to the App?</Text>
                         <Text style={styles.registerLink}>Register</Text>
                         <Text style={styles.registerText}>here</Text>
                     </TouchableOpacity>
-                </View> */}
+                </View>
             </ScrollView>
         </KeyboardAvoidingView>
 
@@ -265,7 +164,7 @@ const styling = (colorScheme: string) =>
             flex: 1,
             backgroundColor: '#fff',
             paddingBottom: Platform.OS == 'ios' ? 30 : 40,
-            paddingTop: Platform.OS == 'ios' ? 60 : 30
+            paddingTop: Platform.OS == 'ios' ? 60 : 20
 
         },
         scrollContainer: {
@@ -279,12 +178,6 @@ const styling = (colorScheme: string) =>
             color: colorScheme === 'dark' ? '#fff' : '#000',
             textTransform: 'uppercase',
             textAlign: 'center'
-        },
-        subtitle: {
-            fontSize: 16,
-            color: colorScheme === 'dark' ? '#fff' : '#000',
-            textAlign: 'center',
-            paddingTop: 16
         },
         image: {
             width: 210,
@@ -321,7 +214,10 @@ const styling = (colorScheme: string) =>
             borderRadius: 30,
             alignItems: "center",
             marginTop: 10,
-            marginBottom: 10
+            marginBottom: 10,
+            flexDirection: 'row',
+            gap: 10,
+            justifyContent: 'center'
         },
         buttonText: {
             color: '#fff',
@@ -370,16 +266,5 @@ const styling = (colorScheme: string) =>
             color: 'red',
             fontFamily: 'Avenir',
             fontSize: 14,
-        },
-        backBtn: {
-            position: 'absolute',
-            top: Platform.OS == 'ios' ? 60 : 50,
-            left: 20,
-            zIndex: 1,
-        },
-        back: {
-            width: 11,
-            height: 20,
-            objectFit: 'contain'
         }
     });
