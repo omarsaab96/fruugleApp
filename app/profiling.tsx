@@ -41,6 +41,7 @@ export default function ProfilingScreen() {
     const [submitingStep2, setSubmitingStep2] = useState(false)
     const [submitingStep3, setSubmitingStep3] = useState(false)
     const [submitingStep4, setSubmitingStep4] = useState(false)
+    const [submitingStep5, setSubmitingStep5] = useState(false)
 
 
     useEffect(() => {
@@ -124,8 +125,19 @@ export default function ProfilingScreen() {
         }
         console.log(step4Info)
         setSubmitingStep4(false)
-        // await SecureStore.setItemAsync('currentStep', '5');
-        // setStep(await SecureStore.getItemAsync('currentStep'));
+        await SecureStore.setItemAsync('currentStep', '5');
+        setStep(await SecureStore.getItemAsync('currentStep'));
+    }
+
+    const handleCompleteStep5 = async () => {
+        setSubmitingStep5(true)
+        const step5Info = {
+            cartSetUp: null
+        }
+        console.log(step5Info)
+        setSubmitingStep5(false)
+        await SecureStore.setItemAsync('currentStep', '6');
+        setStep(await SecureStore.getItemAsync('currentStep'));
     }
 
     return (
@@ -393,6 +405,23 @@ export default function ProfilingScreen() {
                     </View>
                 }
 
+                {step == '5' &&
+                    <View>
+                        <View style={styles.visualSynth}>
+                            <Image style={styles.voiceWave} source={require('../assets/images/voiceWave.gif')} />
+                            <Image style={styles.aiWave} source={require('../assets/images/aiWave.gif')} />
+                            <Image style={styles.fruugleLogo} source={require('../assets/images/cartLogo.png')} />
+                        </View>
+
+                        <Text style={[styles.paragraph, { fontSize: 20, textAlign: 'center', marginBottom: 35 }]}>
+                            Please start with adding the product to your basket
+                        </Text>
+                        <Text style={[styles.paragraph, { textAlign: 'center', marginBottom: 35 }]}>
+                            You tell me the type of product with some other details like size or package, with or without the brand and I will start adding products in your basket
+                        </Text>
+                    </View>
+                }
+
             </ScrollView>
 
 
@@ -439,10 +468,22 @@ export default function ProfilingScreen() {
                         // style={[styles.button, selectedStores.length == 0 && { backgroundColor: '#707070' }]}
                         style={styles.button}
                         onPress={() => handleCompleteStep4()}
-                        // disabled={(selectedStores.length == 0)}
+                    // disabled={(selectedStores.length == 0)}
                     >
                         <Text style={styles.buttonText}>Proceed</Text>
                         {submitingStep4 && <ActivityIndicator size='small' color='#fff' />}
+                    </TouchableOpacity>
+                }
+
+                {step == '5' &&
+                    <TouchableOpacity
+                        // style={[styles.button, selectedStores.length == 0 && { backgroundColor: '#707070' }]}
+                        style={styles.button}
+                        onPress={() => handleCompleteStep5()}
+                    // disabled={(selectedStores.length == 0)}
+                    >
+                        <Text style={styles.buttonText}>Continue</Text>
+                        {submitingStep5 && <ActivityIndicator size='small' color='#fff' />}
                     </TouchableOpacity>
                 }
             </View>
@@ -548,6 +589,38 @@ const styling = (colorScheme: string) => {
             fontFamily: 'Avenir',
             color: colorScheme === 'dark' ? '#fff' : '#000',
             fontSize: 16,
+        },
+        visualSynth: {
+            marginBottom: 40,
+            width: 270,
+            height: 270,
+            alignSelf: 'center',
+            position: 'relative'
+        },
+        voiceWave: {
+            position: 'absolute',
+            width: '100%',
+            height: '100%',
+            top: 0,
+            left: 0,
+            objectFit: 'contain',
+        },
+        aiWave: {
+            position: 'absolute',
+            width: 160,
+            height:160,
+            aspectRatio: 1,
+            top: 55,
+            left: 60,
+            objectFit: 'contain',
+        },
+        fruugleLogo: {
+            position: 'absolute',
+            width: 120,
+            height:92,
+            top: 90,
+            left: 80,
+            objectFit: 'contain',
         },
         radioBtns: {
             flexDirection: 'row',
