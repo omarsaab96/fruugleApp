@@ -15,12 +15,23 @@ export default function ProfilingScreen() {
     const insets = useSafeAreaInsets();
     const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
     const [showTimePicker, setShowTimePicker] = useState(false);
-
+    const stores = [
+        { id: '1', name: "Coop", logo: require('../assets/images/coop.png') },
+        { id: '2', name: "Esselunga", logo: require('../assets/images/esselunga.png') },
+        { id: '3', name: "HeyConad", logo: require('../assets/images/heyconad.png') },
+        { id: '4', name: "Carrefour", logo: require('../assets/images/carrefour.png') },
+        { id: '5', name: "IlGigante", logo: require('../assets/images/ilGigante.png') },
+        { id: '6', name: "Bennet", logo: require('../assets/images/bennet.png') },
+        { id: '7', name: "Iperal", logo: require('../assets/images/iperal.png') },
+        { id: '8', name: "Pam", logo: require('../assets/images/pam.png') },
+        { id: '9', name: "Lidl", logo: require('../assets/images/lidl.png') },
+    ]
 
 
     const [selectedStyle, setSelectedStyle] = useState('Formal')
     const [selectedMode, setSelectedMode] = useState('')
     const [selectedDays, setSelectedDays] = useState<string[]>([]);
+    const [selectedStores, setSelectedStores] = useState<string[]>([]);
     const [time, setTime] = useState(new Date());
     const [threshold, setThreshold] = useState('0');
     const [specialOffer, setSpecialOffer] = useState(true);
@@ -29,6 +40,7 @@ export default function ProfilingScreen() {
     const [submitingStep1, setSubmitingStep1] = useState(false)
     const [submitingStep2, setSubmitingStep2] = useState(false)
     const [submitingStep3, setSubmitingStep3] = useState(false)
+    const [submitingStep4, setSubmitingStep4] = useState(false)
 
 
     useEffect(() => {
@@ -56,6 +68,14 @@ export default function ProfilingScreen() {
         } else {
             setSelectedDays([...selectedDays, day]);
         }
+    };
+
+    const toggleStore = (id: string) => {
+        setSelectedStores((prev) =>
+            prev.includes(id)
+                ? prev.filter((storeId) => storeId !== id)
+                : [...prev, id]
+        );
     };
 
     const handleCompleteStep1 = async () => {
@@ -95,6 +115,17 @@ export default function ProfilingScreen() {
         setSubmitingStep3(false)
         await SecureStore.setItemAsync('currentStep', '4');
         setStep(await SecureStore.getItemAsync('currentStep'));
+    }
+
+    const handleCompleteStep4 = async () => {
+        setSubmitingStep4(true)
+        const step4Info = {
+            stores: selectedStores
+        }
+        console.log(step4Info)
+        setSubmitingStep4(false)
+        // await SecureStore.setItemAsync('currentStep', '5');
+        // setStep(await SecureStore.getItemAsync('currentStep'));
     }
 
     return (
@@ -334,15 +365,44 @@ export default function ProfilingScreen() {
                     </View>
                 }
 
+                {step == '4' &&
+                    <View>
+                        <Text style={styles.title}>{t('Pick the Online Store')}</Text>
+                        <Text style={[styles.paragraph, { marginBottom: 35 }]}>
+                            Now let's define the online stores where you want me to analyze you preferred basket of products and loyalty points:
+                        </Text>
+
+                        <View style={styles.storeContainer}>
+                            {stores.map((store) => {
+                                const isSelected = selectedStores.includes(store.id);
+                                return (
+                                    <TouchableOpacity
+                                        key={store.id}
+                                        style={[
+                                            styles.storeCard,
+                                            isSelected && { borderColor: '#155935', borderWidth: 2 },
+                                        ]}
+                                        onPress={() => toggleStore(store.id)}
+                                    >
+                                        {isSelected && <Image source={require('../assets/images/selected.png')} style={styles.storeSelected} />}
+                                        <Image source={store.logo} style={styles.storeLogo} />
+                                    </TouchableOpacity>
+                                );
+                            })}
+                        </View>
+                    </View>
+                }
+
             </ScrollView>
 
 
             <View style={styles.stepButton}>
-                <View style={styles.dots}>
+                {parseInt(step) < 4 && <View style={styles.dots}>
                     <View style={[styles.dot, step == '1' && styles.activeDot]}></View>
                     <View style={[styles.dot, step == '2' && styles.activeDot]}></View>
                     <View style={[styles.dot, step == '3' && styles.activeDot]}></View>
                 </View>
+                }
 
                 {step == '1' &&
                     <TouchableOpacity
@@ -374,10 +434,21 @@ export default function ProfilingScreen() {
                         {submitingStep3 && <ActivityIndicator size='small' color='#fff' />}
                     </TouchableOpacity>
                 }
+                {step == '4' &&
+                    <TouchableOpacity
+                        // style={[styles.button, selectedStores.length == 0 && { backgroundColor: '#707070' }]}
+                        style={styles.button}
+                        onPress={() => handleCompleteStep4()}
+                        // disabled={(selectedStores.length == 0)}
+                    >
+                        <Text style={styles.buttonText}>Proceed</Text>
+                        {submitingStep4 && <ActivityIndicator size='small' color='#fff' />}
+                    </TouchableOpacity>
+                }
             </View>
 
 
-        </KeyboardAvoidingView>
+        </KeyboardAvoidingView >
     );
 }
 
@@ -676,6 +747,35 @@ const styling = (colorScheme: string) => {
             height: 20,
             borderRadius: 15,
             backgroundColor: "#fff",
+        },
+        storeContainer: {
+            flexDirection: 'row',
+            flexWrap: 'wrap',
+            justifyContent: 'space-between',
+        },
+        storeCard: {
+            width: '48%', // 2 per row with spacing
+            alignItems: 'center',
+            marginBottom: 20,
+            padding: 10,
+            borderWidth: 1,
+            borderColor: '#ccc',
+            borderRadius: 12,
+            position: 'relative'
+        },
+        storeSelected: {
+            position: 'absolute',
+            width: 20,
+            height: 20,
+            top: -10,
+            right: -10,
+            backgroundColor: 'white',
+            objectFit: 'contain'
+        },
+        storeLogo: {
+            width: 100,
+            height: 60,
+            resizeMode: 'contain',
         },
     });
 };
