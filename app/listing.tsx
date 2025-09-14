@@ -1,5 +1,6 @@
 import BottomSheet from "@gorhom/bottom-sheet";
 import { useRouter } from 'expo-router';
+import * as SecureStore from "expo-secure-store";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Dimensions, FlatList, Image, KeyboardAvoidingView, Platform, RefreshControl, StyleSheet, Text, TextInput, TouchableOpacity, useColorScheme, View } from 'react-native';
@@ -23,6 +24,8 @@ export default function ListingScreen() {
     const [selectedBrands, setSelectedBrands] = useState([]);
     const sortOptions = ["Popular", "Latest", "Price: Low to High", "Price: High to Low"];
     const [sortBy, setSortBy] = useState<string>("Popular");
+    const [tutorialStep, setTutorialStep] = useState(0);
+
 
 
     const filterRef = useRef<BottomSheet>(null);
@@ -44,7 +47,17 @@ export default function ListingScreen() {
     const [debounceTimeout, setDebounceTimeout] = useState(null);
 
     useEffect(() => {
+        const initTutorial = async () => {
+            const currentTutorialStep = await SecureStore.getItemAsync("tutorialStep");
+            if (!currentTutorialStep) {
+                await SecureStore.setItemAsync("tutorialStep", "0");
+            } else {
+                setTutorialStep(parseInt(currentTutorialStep))
+            }
+        }
+
         refreshProducts()
+        initTutorial()
     }, []);
 
     const handleScanBarcode = () => {
@@ -181,6 +194,19 @@ export default function ListingScreen() {
         }
     }, [page, hasMore, loading, keyword, selectedBrands, sortBy]);
 
+    const handleSkipTutorial = async () => {
+        setTutorialStep(999)
+        await SecureStore.setItemAsync('tutorialStep', "999")
+    }
+
+    const handleNextTutorialStep = async () => {
+        if (tutorialStep == 4) {
+            handleSkipTutorial()
+            return;
+        }
+        await SecureStore.setItemAsync('tutorialStep', "" + tutorialStep + 1)
+        setTutorialStep(prev => prev + 1)
+    }
 
     return (
         <KeyboardAvoidingView
@@ -194,9 +220,25 @@ export default function ListingScreen() {
                     <TouchableOpacity onPress={() => { router.back() }}>
                         <Image source={require('../assets/images/back.png')} style={styles.back} />
                     </TouchableOpacity>
-                    <TouchableOpacity onPress={() => handleScanBarcode()}>
+                    <TouchableOpacity style={styles.barcodeCTA} onPress={() => handleScanBarcode()}>
                         <Image source={require('../assets/images/barcode.png')} style={styles.barcode} />
+                        {tutorialStep >= 4 && tutorialStep < 999 && <Image source={require('../assets/images/tooltip_inverse.png')} style={[styles.tooltip, styles.barcodeTooltip]} />}
                     </TouchableOpacity>
+
+                    {tutorialStep >= 4 && tutorialStep < 999 && <View style={[styles.tutorial, styles.topTutorial]}>
+                        <Text style={styles.tutorialText}>
+                            The screen where you can scan any barcode or receipt and add it in your cart
+                        </Text>
+
+                        <View style={styles.tutorialActions}>
+                            <TouchableOpacity onPress={() => { handleSkipTutorial() }}>
+                                <Text style={styles.tutorialCTAText}>Skip</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={styles.tutorialCTA} onPress={() => { handleNextTutorialStep() }}>
+                                <Text style={styles.tutorialCTAPrimaryText}>Finish</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>}
                 </View>
 
                 <View>
@@ -260,32 +302,53 @@ export default function ListingScreen() {
                     </View>
                 }
             />
+
             <View style={styles.navbar}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
                     <TouchableOpacity style={styles.navbarCTA} onPress={() => router.push('/')}>
                         <Image source={require('../assets/images/msgPageIcon.png')} style={styles.navImg} />
-                        {/* <Image source={require('../assets/images/tooltip.png')} style={styles.tooltip} /> */}
+                        {tutorialStep == 0 && <Image source={require('../assets/images/tooltip.png')} style={styles.tooltip} />}
                     </TouchableOpacity>
 
                     <TouchableOpacity style={styles.navbarCTA} onPress={() => router.push('/listing')}>
                         <Image source={require('../assets/images/browsePageIcon.png')} style={styles.navImg} />
-                        {/* <Image source={require('../assets/images/tooltip.png')} style={styles.tooltip} /> */}
+                        {tutorialStep == 1 && <Image source={require('../assets/images/tooltip.png')} style={styles.tooltip} />}
                     </TouchableOpacity>
 
                     <TouchableOpacity style={styles.navbarCTA} onPress={() => router.push('/')}>
                         <Image source={require('../assets/images/cartPageIcon.png')} style={styles.navImg} />
-                        {/* <Image source={require('../assets/images/tooltip.png')} style={styles.tooltip} /> */}
+                        {tutorialStep == 2 && <Image source={require('../assets/images/tooltip.png')} style={styles.tooltip} />}
                     </TouchableOpacity>
 
                     <TouchableOpacity style={styles.navbarCTA} onPress={() => router.push('/')}>
                         <Image source={require('../assets/images/profilePageIcon.png')} style={styles.navImg} />
-                        {/* <Image source={require('../assets/images/tooltip.png')} style={styles.tooltip} /> */}
+                        {tutorialStep == 3 && <Image source={require('../assets/images/tooltip.png')} style={styles.tooltip} />}
                     </TouchableOpacity>
                 </View>
 
-                {/* <View style={styles.tutorial}>
-                    <Text></Text>
-                </View> */}
+                {tutorialStep < 4 && <View style={styles.tutorial}>
+                    {tutorialStep == 0 && <Text style={styles.tutorialText}>
+                        The screen where you can chat with me
+                    </Text>}
+                    {tutorialStep == 1 && <Text style={styles.tutorialText}>
+                        Shopping page where you can search manually for products
+                    </Text>}
+                    {tutorialStep == 2 && <Text style={styles.tutorialText}>
+                        The standard cart where you can also see product recommendations
+                    </Text>}
+                    {tutorialStep == 3 && <Text style={styles.tutorialText}>
+                        Profile with all your settings
+                    </Text>}
+
+                    <View style={styles.tutorialActions}>
+                        <TouchableOpacity onPress={() => { handleSkipTutorial() }}>
+                            <Text style={styles.tutorialCTAText}>Skip</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.tutorialCTA} onPress={() => { handleNextTutorialStep() }}>
+                            <Text style={styles.tutorialCTAPrimaryText}>Next</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>}
             </View>
 
 
@@ -308,7 +371,9 @@ const styling = (colorScheme: string) => {
             justifyContent: 'space-between',
             alignItems: 'center',
             backgroundColor: colorScheme === 'dark' ? '#1E1E1E' : '#fff',
-            marginBottom: 10
+            marginBottom: 10,
+            position:'relative',
+            zIndex:1
         },
         back: {
             width: 11,
@@ -319,6 +384,10 @@ const styling = (colorScheme: string) => {
             width: 30,
             height: 40,
             objectFit: 'contain'
+        },
+        barcodeCTA: {
+            position: 'relative',
+            zIndex: 1
         },
         searchContainer: {
             paddingHorizontal: 20,
@@ -358,6 +427,7 @@ const styling = (colorScheme: string) => {
             shadowRadius: 5,
             // Android
             elevation: 2,
+            zIndex:1
         },
         searchIcon: {
             position: 'absolute',
@@ -399,13 +469,48 @@ const styling = (colorScheme: string) => {
             position: 'relative'
         },
         tutorial: {
-            position:'absolute',
+            position: 'absolute',
             backgroundColor: '#155935',
             borderRadius: 12,
             padding: 12,
             width: width - 20,
-            bottom:65,
-            left:10
+            bottom: 65,
+            left: 10
+        },
+        topTutorial: {
+            bottom: 'auto',
+            top: 55,
+        },
+        tutorialActions: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'flex-end',
+            gap: 15
+        },
+        tutorialText: {
+            fontSize: 16,
+            color: '#fff',
+            lineHeight: 21,
+            fontFamily: 'Avenir',
+            marginBottom: 10
+        },
+        tutorialCTA: {
+            paddingHorizontal: 20,
+            paddingVertical: 5,
+            borderRadius: 30,
+            backgroundColor: '#fff',
+        },
+        tutorialCTAText: {
+            fontSize: 14,
+            color: '#fff',
+            lineHeight: 25,
+            fontFamily: 'Avenir',
+        },
+        tutorialCTAPrimaryText: {
+            fontSize: 14,
+            color: '#155935',
+            lineHeight: 25,
+            fontFamily: 'Avenir',
         },
         navbarCTA: {
             flex: 1,
@@ -427,6 +532,11 @@ const styling = (colorScheme: string) => {
             width: 25,
             height: 25,
             objectFit: 'contain',
-        }
+        },
+        barcodeTooltip: {
+            bottom: -20,
+            top: 'auto',
+            left: 0,
+        },
     });
 };

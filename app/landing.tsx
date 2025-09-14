@@ -16,6 +16,7 @@ export default function landingScreen() {
         await SecureStore.deleteItemAsync("userID");
         await SecureStore.deleteItemAsync("email_verified");
         await SecureStore.deleteItemAsync("currentStep");
+        await SecureStore.deleteItemAsync("tutorialStep");
         router.replace("/");
     }
 
