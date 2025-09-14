@@ -12,7 +12,6 @@ export default function ProfilingScreen() {
     const [step, setStep] = useState<string | null>(null);
     const styles = styling(colorScheme)
     const { t } = useTranslation();
-    const insets = useSafeAreaInsets();
     const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
     const [showTimePicker, setShowTimePicker] = useState(false);
     const stores = [
@@ -130,14 +129,15 @@ export default function ProfilingScreen() {
     }
 
     const handleCompleteStep5 = async () => {
-        setSubmitingStep5(true)
-        const step5Info = {
-            cartSetUp: null
-        }
-        console.log(step5Info)
-        setSubmitingStep5(false)
-        await SecureStore.setItemAsync('currentStep', '6');
-        setStep(await SecureStore.getItemAsync('currentStep'));
+        // setSubmitingStep5(true)
+        // const step5Info = {
+        //     cartSetUp: null
+        // }
+        // console.log(step5Info)
+        // setSubmitingStep5(false)
+        // await SecureStore.setItemAsync('currentStep', '6');
+        // setStep(await SecureStore.getItemAsync('currentStep'));
+        router.push("/listing")
     }
 
     return (
@@ -482,7 +482,7 @@ export default function ProfilingScreen() {
                         onPress={() => handleCompleteStep5()}
                     // disabled={(selectedStores.length == 0)}
                     >
-                        <Text style={styles.buttonText}>Continue</Text>
+                        <Text style={styles.buttonText}>Browse products</Text>
                         {submitingStep5 && <ActivityIndicator size='small' color='#fff' />}
                     </TouchableOpacity>
                 }
@@ -505,7 +505,7 @@ const styling = (colorScheme: string) => {
         },
         topNavBar: {
             marginBottom: 30,
-            paddingHorizontal: 32,
+            paddingHorizontal: 20,
             flexDirection: 'row',
             justifyContent: 'space-between',
             alignItems: 'center',
@@ -522,10 +522,10 @@ const styling = (colorScheme: string) => {
         },
         scrollContainer: {
             flexGrow: 1,
-            paddingHorizontal: 32
+            paddingHorizontal: 20
         },
         stepsProgress: {
-            paddingHorizontal: 32,
+            paddingHorizontal: 20,
             marginBottom: 50
         },
         stepsContainer: {
@@ -553,7 +553,7 @@ const styling = (colorScheme: string) => {
             justifyContent: 'center',
             marginBottom: 5,
             outlineWidth: 4,
-            outlineColor: colorScheme === 'dark' ? '#000' : '#fff',
+            outlineColor: colorScheme === 'dark' ? '#121212' : '#fff',
         },
         activeStepNumber: {
             backgroundColor: '#155935',
@@ -717,7 +717,7 @@ const styling = (colorScheme: string) => {
             justifyContent: 'center'
         },
         stepButton: {
-            paddingHorizontal: 32
+            paddingHorizontal: 20
         },
         dots: {
             flexDirection: 'row',
