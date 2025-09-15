@@ -527,7 +527,86 @@ export default function ListingScreen() {
 
                 </BottomSheet>
 
-                
+                <BottomSheet
+                    ref={filterRef}
+                    index={-1}
+                    snapPoints={snapPoints}
+                    footerComponent={renderFilterFooter}
+                    enableDynamicSizing={false}
+                    enablePanDownToClose={true}
+                    backgroundStyle={styles.modal}
+                    handleIndicatorStyle={styles.modalHandle}
+                    backdropComponent={props => <BottomSheetBackdrop {...props} disappearsOnIndex={-1} appearsOnIndex={0} />}
+                    keyboardBehavior="interactive"
+                    keyboardBlurBehavior="restore"
+                >
+                    <View style={{}}>
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>Brand</Text>
+                        </View>
+                    </View>
+
+                    <BottomSheetScrollView contentContainerStyle={styles.modalScrollView}>
+                        {brands.map((brand) => {
+                            const isSelected = selectedBrands.includes(brand);
+                            return (
+                                <TouchableOpacity
+                                    key={brand}
+                                    onPress={() =>
+                                        setSelectedBrands((prev) =>
+                                            isSelected ? prev.filter((b) => b !== brand) : [...prev, brand]
+                                        )
+                                    }
+                                    style={styles.filterListItem}
+                                >
+                                    <Text style={styles.filterListItemText}>{brand}</Text>
+                                    <View style={[styles.radio, isSelected && { backgroundColor: '#0d4527' }]}>
+                                        <Image style={styles.radioImg} source={require('../assets/images/check.png')} />
+                                    </View>
+                                </TouchableOpacity>
+                            );
+                        })}
+                    </BottomSheetScrollView>
+
+                </BottomSheet>
+
+                <BottomSheet
+                    ref={sortRef}
+                    index={-1}
+                    snapPoints={snapPoints}
+                    footerComponent={renderSortingFooter}
+                    enableDynamicSizing={false}
+                    enablePanDownToClose={true}
+                    backgroundStyle={styles.modal}
+                    handleIndicatorStyle={styles.modalHandle}
+                    backdropComponent={props => <BottomSheetBackdrop {...props} disappearsOnIndex={-1} appearsOnIndex={0} />}
+                    keyboardBehavior="interactive"
+                    keyboardBlurBehavior="restore"
+                >
+                    <View style={{}}>
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>Sort By</Text>
+                        </View>
+                    </View>
+
+                    <BottomSheetScrollView contentContainerStyle={[styles.modalScrollView, { paddingHorizontal: 0 }]}>
+                        {sortOptions.map((sortOption) => {
+                            const isSelected = sortBy == sortOption;
+                            return (
+                                <TouchableOpacity
+                                    key={sortOption}
+                                    onPress={() => setSortBy(sortOption)}
+                                    style={[styles.sortingListItem, isSelected && { backgroundColor: '#0d4527' }]}
+                                >
+                                    <Text style={[styles.sortingListItemText, isSelected && { color: '#fff' }]}>
+                                        {sortOption}
+                                    </Text>
+                                </TouchableOpacity>
+                            );
+                        })}
+                    </BottomSheetScrollView>
+
+                </BottomSheet>
             </KeyboardAvoidingView >
         </GestureHandlerRootView>
     );
