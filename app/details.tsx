@@ -11,7 +11,7 @@ import Entypo from '@expo/vector-icons/Entypo';
 const { width } = Dimensions.get('window');
 const API_URL = "http://10.0.2.2:4000/api"
 
-export default function ListingScreen() {
+export default function DetailsScreen() {
     const { id } = useLocalSearchParams();
 
     const router = useRouter();

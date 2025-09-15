@@ -3,5 +3,6 @@
   "login": "Login",
   "registerTitle": "USER REGISTRATION",
   "registerInstruction":"Please fill in the details to proceed",
-  "registerCTA":"Register"
+  "registerCTA":"Register",
+  "resetPassword":"Reset Password"
 }

@@ -76,6 +76,12 @@ export default function LoginScreen() {
             console.error("Login error:", error.message);
         }
     }
+
+    const handleResetPassword = ()=>{
+        router.push('/resetPassword')
+    }
+
+
     return (
         // <View style={styles.appContainer}>
         //     <TouchableOpacity onPress={() => { switchLanguage() }}>
@@ -139,7 +145,7 @@ export default function LoginScreen() {
                         {loggingIn && <ActivityIndicator size='small' color='#fff' />}
                     </TouchableOpacity>
 
-                    <TouchableOpacity style={styles.forgot}>
+                    <TouchableOpacity style={styles.forgot} onPress={()=>{handleResetPassword()}}>
                         <Text style={styles.forgotText}>Reset Password</Text>
                     </TouchableOpacity>
                 </View>
