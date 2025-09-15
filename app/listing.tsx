@@ -139,7 +139,7 @@ export default function ListingScreen() {
         const queryParams = new URLSearchParams();
 
         if (searchKeyword) queryParams.append("q", searchKeyword);
-        if (selectedBrands) queryParams.append("brand", selectedBrands.join(","));
+        if (selectedBrands.length>0) queryParams.append("brand", selectedBrands.join(","));
 
         if (sortBy) {
             queryParams.append("sortBy", sortBy.replace(":", "").replaceAll(" ", ""));
