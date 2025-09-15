@@ -1,14 +1,16 @@
-import BottomSheet from "@gorhom/bottom-sheet";
+import BottomSheet, { BottomSheetBackdrop, BottomSheetFooter, BottomSheetScrollView } from "@gorhom/bottom-sheet";
 import { useRouter } from 'expo-router';
 import * as SecureStore from "expo-secure-store";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Dimensions, FlatList, Image, KeyboardAvoidingView, Platform, RefreshControl, StyleSheet, Text, TextInput, TouchableOpacity, useColorScheme, View } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ProductCard from '../components/productCard';
 
 import Feather from '@expo/vector-icons/Feather';
 import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import Octicons from '@expo/vector-icons/Octicons';
 
 const { width } = Dimensions.get('window');
@@ -19,15 +21,28 @@ export default function ListingScreen() {
     let colorScheme = useColorScheme();
     const styles = styling(colorScheme)
     const { t } = useTranslation();
+    const insets = useSafeAreaInsets();
+
 
     const [products, setProducts] = useState([]);
     const [selectedBrands, setSelectedBrands] = useState([]);
+    const categories = {
+        "Fruits": ["Local", "Imported", "Tropical"],
+        "Pasta": ["Spaghetti", "Penne", "Fusilli"],
+        "Drinks": ["Soda", "Juice", "Water", "Tea", "Coffee"],
+        "Snacks": ["Chips", "Nuts", "Chocolate", "Cookies"],
+        "Dairy": ["Milk", "Cheese", "Yogurt", "Butter"],
+        "Meat": ["Beef", "Chicken", "Lamb", "Fish"],
+        "Bakery": ["Bread", "Croissant", "Muffin", "Cake"]
+    };
     const sortOptions = ["Popular", "Latest", "Price: Low to High", "Price: High to Low"];
+    const brands = ["Barilla", "Conad", "Buitoni", "Filippo Berio", "Classico", "Alessi"];
     const [sortBy, setSortBy] = useState<string>("Popular");
+    const [selectedCategory, setSelectedCategory] = useState<string>("");
+    const [selectedSubCategory, setSelectedSubCategory] = useState<string>("");
     const [tutorialStep, setTutorialStep] = useState(0);
 
-
-
+    const categoriesRef = useRef<BottomSheet>(null);
     const filterRef = useRef<BottomSheet>(null);
     const sortRef = useRef<BottomSheet>(null);
     const snapPoints = useMemo(() => ["50%", "85%"], []);
@@ -38,6 +53,7 @@ export default function ListingScreen() {
     const [hasMore, setHasMore] = useState(true);
 
     const [loading, setLoading] = useState(true);
+    const [categorizing, setCategorizing] = useState(true);
     const [filtering, setFiltering] = useState(true);
     const [sorting, setSorting] = useState(true);
     const [searching, setSearching] = useState(false);
@@ -98,21 +114,9 @@ export default function ListingScreen() {
         setDebounceTimeout(timeout);
     };
 
-    const getSetFiltersCount = () => {
-        let count = 0;
-
-        if (selectedBrands.length > 0) count++;
-
-        return count;
-    }
-
-    const getSetSortsCount = () => {
-        let count = 0;
-
-        if (sortBy != 'date') count++;
-
-        return count;
-    }
+    const handleCategories = () => {
+        categoriesRef.current?.snapToIndex(0);
+    };
 
     const handleFilters = () => {
         filterRef.current?.snapToIndex(0);
@@ -135,10 +139,18 @@ export default function ListingScreen() {
         const queryParams = new URLSearchParams();
 
         if (searchKeyword) queryParams.append("q", searchKeyword);
-        if (selectedBrands) queryParams.append("brand", selectedBrands[0]);
+        if (selectedBrands) queryParams.append("brand", selectedBrands.join(","));
 
         if (sortBy) {
-            queryParams.append("sortBy", sortBy);
+            queryParams.append("sortBy", sortBy.replace(":", "").replaceAll(" ", ""));
+        }
+
+        if (selectedCategory) {
+            queryParams.append("category", selectedCategory);
+        }
+
+        if (selectedSubCategory) {
+            queryParams.append("subcategory", selectedSubCategory);
         }
 
         queryParams.append("page", String(pageNum));
@@ -165,8 +177,7 @@ export default function ListingScreen() {
         } finally {
             setLoading(false);
         }
-    }, [selectedBrands, sortBy, keyword]);
-
+    }, [selectedBrands, sortBy, selectedCategory, selectedSubCategory, keyword]);
 
     const refreshProducts = useCallback(async () => {
         setRefreshing(true);
@@ -187,12 +198,12 @@ export default function ListingScreen() {
         } finally {
             setFiltering(false);
             setSorting(false);
+            setCategorizing(false)
             setRefreshing(false);
             setLoading(false);
-            console.log('refreshing set to false')
             handleCloseModalPress();
         }
-    }, [page, hasMore, loading, keyword, selectedBrands, sortBy]);
+    }, [page, hasMore, loading, keyword, selectedBrands, sortBy, selectedCategory, selectedSubCategory]);
 
     const handleSkipTutorial = async () => {
         setTutorialStep(999)
@@ -208,151 +219,317 @@ export default function ListingScreen() {
         setTutorialStep(prev => prev + 1)
     }
 
+    const applyCategory = async () => {
+        setCategorizing(true)
+        setPage(1);
+        await refreshProducts();
+        categoriesRef.current?.close();
+    };
+
+    const applyFilters = async () => {
+        setFiltering(true)
+        setPage(1);
+        await refreshProducts();
+        filterRef.current?.close();
+    };
+
+    const applySorting = async () => {
+        setSorting(true)
+        setPage(1);
+        await refreshProducts();
+        // sortRef.current?.close();
+    };
+
+    const renderCategoryFooter = useCallback(
+        props => (
+            <BottomSheetFooter {...props} style={{ backgroundColor: '#fff', paddingBottom: insets.bottom }}>
+                <View style={{ paddingHorizontal: 15 }}>
+                    <TouchableOpacity
+                        onPress={applyCategory}
+                        style={styles.modalButton}
+                        disabled={categorizing}
+                    >
+                        <Text style={styles.modalButtonText}>Search by category</Text>
+                        {categorizing && <ActivityIndicator size="small" color="#fff" />}
+                    </TouchableOpacity>
+                </View>
+            </BottomSheetFooter>
+        ),
+        [categorizing, selectedCategory, selectedSubCategory]
+    );
+
+    const renderFilterFooter = useCallback(
+        props => (
+            <BottomSheetFooter {...props} style={{ backgroundColor: '#fff', paddingBottom: insets.bottom }}>
+                <View style={{ paddingHorizontal: 15 }}>
+                    <TouchableOpacity
+                        onPress={applyFilters}
+                        style={styles.modalButton}
+                        disabled={filtering}
+                    >
+                        <Text style={styles.modalButtonText}>Apply Brand</Text>
+                        {filtering && <ActivityIndicator size="small" color="#fff" />}
+                    </TouchableOpacity>
+                </View>
+            </BottomSheetFooter>
+        ),
+        [filtering, selectedBrands]
+    );
+
+    const renderSortingFooter = useCallback(
+        props => (
+            <BottomSheetFooter {...props} style={{ backgroundColor: '#fff', paddingBottom: insets.bottom }}>
+                <View style={{ paddingHorizontal: 15 }}>
+                    <TouchableOpacity
+                        onPress={applySorting}
+                        style={styles.modalButton}
+                        disabled={sorting}
+                    >
+                        <Text style={styles.modalButtonText}>Sort</Text>
+                        {sorting && <ActivityIndicator size="small" color="#fff" />}
+                    </TouchableOpacity>
+                </View>
+            </BottomSheetFooter>
+        ),
+        [sorting, sortBy]
+    );
+
     return (
-        <KeyboardAvoidingView
-            behavior={Platform.OS === "ios" ? "padding" : "height"}
-            style={styles.container}
-        >
+        <GestureHandlerRootView>
+            <KeyboardAvoidingView
+                behavior={Platform.OS === "ios" ? "padding" : "height"}
+                style={styles.container}
+            >
+                <View style={[styles.header, tutorialStep == 4 && { zIndex: 1 }]}>
+                    <View style={styles.topNavBar}>
+                        <TouchableOpacity onPress={() => { router.back() }}>
+                            <Image source={require('../assets/images/back.png')} style={styles.back} />
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.barcodeCTA} onPress={() => handleScanBarcode()}>
+                            <Image source={require('../assets/images/barcode.png')} style={styles.barcode} />
+                            {tutorialStep >= 4 && tutorialStep < 999 && <Image source={require('../assets/images/tooltip_inverse.png')} style={[styles.tooltip, styles.barcodeTooltip]} />}
+                        </TouchableOpacity>
 
+                        {tutorialStep >= 4 && tutorialStep < 999 && <View style={[styles.tutorial, styles.topTutorial]}>
+                            <Text style={styles.tutorialText}>
+                                The screen where you can scan any barcode or receipt and add it in your cart
+                            </Text>
 
-            <View style={[styles.header]}>
-                <View style={styles.topNavBar}>
-                    <TouchableOpacity onPress={() => { router.back() }}>
-                        <Image source={require('../assets/images/back.png')} style={styles.back} />
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.barcodeCTA} onPress={() => handleScanBarcode()}>
-                        <Image source={require('../assets/images/barcode.png')} style={styles.barcode} />
-                        {tutorialStep >= 4 && tutorialStep < 999 && <Image source={require('../assets/images/tooltip_inverse.png')} style={[styles.tooltip, styles.barcodeTooltip]} />}
-                    </TouchableOpacity>
+                            <View style={styles.tutorialActions}>
+                                <TouchableOpacity onPress={() => { handleSkipTutorial() }}>
+                                    <Text style={styles.tutorialCTAText}>Skip</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity style={styles.tutorialCTA} onPress={() => { handleNextTutorialStep() }}>
+                                    <Text style={styles.tutorialCTAPrimaryText}>Finish</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </View>}
+                    </View>
 
-                    {tutorialStep >= 4 && tutorialStep < 999 && <View style={[styles.tutorial, styles.topTutorial]}>
-                        <Text style={styles.tutorialText}>
-                            The screen where you can scan any barcode or receipt and add it in your cart
+                    <View>
+                        <View style={[styles.searchContainer]}>
+                            <TextInput
+                                style={[styles.input, Platform.OS === 'ios' && { padding: 15 }]}
+                                placeholder="Search for a product..."
+                                placeholderTextColor={colorScheme === 'dark' ? '#FFFFFF' : '#707070'}
+                                value={keyword}
+                                onChangeText={handleSearchInput}
+                                selectionColor="#155935"
+                            />
+                            {searching &&
+                                <ActivityIndicator
+                                    size="small"
+                                    color="#155935"
+                                    style={styles.searchLoader}
+                                />
+                            }
+                            <Feather name="search" size={20} color={colorScheme === 'dark' ? '#FFF' : '#707070'} style={styles.searchIcon} />
+                        </View>
+
+                        <View style={styles.filterBar}>
+                            <View style={[{ flexDirection: 'row', alignItems: 'center', gap: 25 }]}>
+                                <TouchableOpacity style={styles.filterCTA} onPress={() => handleCategories()}>
+                                    <MaterialIcons name="category" size={22} color={colorScheme === 'dark' ? '#fff' : '#000'} />
+                                    <Text style={styles.filterCTAText}>
+                                        Category
+                                    </Text>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity style={styles.filterCTA} onPress={() => handleFilters()}>
+                                    <Octicons name="filter" size={22} color={colorScheme === 'dark' ? '#fff' : '#000'} />
+                                    <Text style={styles.filterCTAText}>
+                                        Brand
+                                    </Text>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity style={styles.filterCTA} onPress={() => handleSort()}>
+                                    <FontAwesome6 name="arrow-right-arrow-left" size={18} color={colorScheme === 'dark' ? '#fff' : '#000'} style={{ transform: [{ rotateZ: "90deg" }] }} />
+                                    <Text style={styles.filterCTAText}>
+                                        {sortBy}
+                                    </Text>
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                    </View>
+                </View>
+
+                <FlatList
+                    style={styles.scrollArea}
+                    data={products}
+                    renderItem={renderProduct}
+                    keyExtractor={item => item._id}
+                    numColumns={2}
+                    columnWrapperStyle={{ gap: 15, paddingHorizontal: 20, paddingTop: 15 }}
+                    ListEmptyComponent={() => (
+                        <Text style={[styles.empty, { fontFamily: 'Avenir' }]}>
+                            No products to show
                         </Text>
+                    )}
+                    onEndReached={() => { if (hasMore && !loading && !refreshing) loadProducts(); }}
+                    onEndReachedThreshold={0.5}
+                    refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refreshProducts} colors={['#155935']} tintColor="#2563EB" />}
+                    ListFooterComponent={
+                        <View style={styles.loadingFooter}>
+                            {hasMore && (loading || refreshing) && <ActivityIndicator size="large" color="#155935" />}
+                        </View>
+                    }
+                />
+
+                <View style={styles.navbar}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                        <TouchableOpacity style={styles.navbarCTA} onPress={() => router.push('/')}>
+                            <Image source={require('../assets/images/msgPageIcon.png')} style={styles.navImg} />
+                            {tutorialStep == 0 && <Image source={require('../assets/images/tooltip.png')} style={styles.tooltip} />}
+                        </TouchableOpacity>
+
+                        <TouchableOpacity style={styles.navbarCTA} onPress={() => router.push('/listing')}>
+                            <Image source={require('../assets/images/browsePageIcon.png')} style={styles.navImg} />
+                            {tutorialStep == 1 && <Image source={require('../assets/images/tooltip.png')} style={styles.tooltip} />}
+                        </TouchableOpacity>
+
+                        <TouchableOpacity style={styles.navbarCTA} onPress={() => router.push('/')}>
+                            <Image source={require('../assets/images/cartPageIcon.png')} style={styles.navImg} />
+                            {tutorialStep == 2 && <Image source={require('../assets/images/tooltip.png')} style={styles.tooltip} />}
+                        </TouchableOpacity>
+
+                        <TouchableOpacity style={styles.navbarCTA} onPress={() => router.push('/')}>
+                            <Image source={require('../assets/images/profilePageIcon.png')} style={styles.navImg} />
+                            {tutorialStep == 3 && <Image source={require('../assets/images/tooltip.png')} style={styles.tooltip} />}
+                        </TouchableOpacity>
+                    </View>
+
+                    {tutorialStep < 4 && <View style={styles.tutorial}>
+                        {tutorialStep == 0 && <Text style={styles.tutorialText}>
+                            The screen where you can chat with me
+                        </Text>}
+                        {tutorialStep == 1 && <Text style={styles.tutorialText}>
+                            Shopping page where you can search manually for products
+                        </Text>}
+                        {tutorialStep == 2 && <Text style={styles.tutorialText}>
+                            The standard cart where you can also see product recommendations
+                        </Text>}
+                        {tutorialStep == 3 && <Text style={styles.tutorialText}>
+                            Profile with all your settings
+                        </Text>}
 
                         <View style={styles.tutorialActions}>
                             <TouchableOpacity onPress={() => { handleSkipTutorial() }}>
                                 <Text style={styles.tutorialCTAText}>Skip</Text>
                             </TouchableOpacity>
                             <TouchableOpacity style={styles.tutorialCTA} onPress={() => { handleNextTutorialStep() }}>
-                                <Text style={styles.tutorialCTAPrimaryText}>Finish</Text>
+                                <Text style={styles.tutorialCTAPrimaryText}>Next</Text>
                             </TouchableOpacity>
                         </View>
                     </View>}
                 </View>
 
-                <View>
-                    <View style={[styles.searchContainer]}>
-                        <TextInput
-                            style={[styles.input, Platform.OS === 'ios' && { padding: 15 }]}
-                            placeholder="Search for a product..."
-                            placeholderTextColor={colorScheme === 'dark' ? '#FFFFFF' : '#707070'}
-                            value={keyword}
-                            onChangeText={handleSearchInput}
-                            selectionColor="#155935"
-                        />
-                        {searching &&
-                            <ActivityIndicator
-                                size="small"
-                                color="#155935"
-                                style={styles.searchLoader}
-                            />
-                        }
-                        <Feather name="search" size={20} color={colorScheme === 'dark' ? '#FFF' : '#707070'} style={styles.searchIcon} />
-                    </View>
-
-                    <View style={[styles.filterBar, { gap: 20 }]}>
-                        <View style={[{ flexDirection: 'row', alignItems: 'center', gap: 50 }]}>
-                            <TouchableOpacity style={styles.filterCTA} onPress={() => handleFilters()}>
-                                <Octicons name="filter" size={22} color={colorScheme === 'dark' ? '#fff' : '#000'} />
-                                <Text style={styles.filterCTAText}>
-                                    Brand
-                                </Text>
-                            </TouchableOpacity>
-
-                            <TouchableOpacity style={styles.filterCTA} onPress={() => handleSort()}>
-                                <FontAwesome6 name="arrow-right-arrow-left" size={18} color={colorScheme === 'dark' ? '#fff' : '#000'} style={{ transform: [{ rotateZ: "90deg" }] }} />
-                                <Text style={styles.filterCTAText}>
-                                    {sortBy}
-                                </Text>
-                            </TouchableOpacity>
+                <BottomSheet
+                    ref={categoriesRef}
+                    index={-1}
+                    snapPoints={snapPoints}
+                    footerComponent={renderCategoryFooter}
+                    enableDynamicSizing={false}
+                    enablePanDownToClose={true}
+                    backgroundStyle={styles.modal}
+                    handleIndicatorStyle={styles.modalHandle}
+                    backdropComponent={props => <BottomSheetBackdrop {...props} disappearsOnIndex={-1} appearsOnIndex={0} />}
+                    keyboardBehavior="interactive"
+                    keyboardBlurBehavior="restore"
+                >
+                    <View style={{}}>
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>Category</Text>
                         </View>
                     </View>
-                </View>
-            </View>
 
-            <FlatList
-                style={styles.scrollArea}
-                data={products}
-                renderItem={renderProduct}
-                keyExtractor={item => item._id}
-                numColumns={2}
-                columnWrapperStyle={{ gap: 15, paddingHorizontal: 20, paddingTop: 15 }}
-                ListEmptyComponent={() => (
-                    <Text style={[styles.empty, { fontFamily: 'Avenir' }]}>
-                        No products to show
-                    </Text>
-                )}
-                onEndReached={() => { if (hasMore && !loading && !refreshing) loadProducts(); }}
-                onEndReachedThreshold={0.5}
-                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refreshProducts} colors={['#155935']} tintColor="#2563EB" />}
-                ListFooterComponent={
-                    <View style={styles.loadingFooter}>
-                        {hasMore && (loading || refreshing) && <ActivityIndicator size="large" color="#155935" />}
-                    </View>
-                }
-            />
+                    <BottomSheetScrollView contentContainerStyle={[styles.modalScrollView, { paddingHorizontal: 0 }]}>
+                        {Object.entries(categories).map(([category, subCategories]) => {
+                            const isSelectedCategory = selectedCategory === category && !selectedSubCategory;
 
-            <View style={styles.navbar}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-                    <TouchableOpacity style={styles.navbarCTA} onPress={() => router.push('/')}>
-                        <Image source={require('../assets/images/msgPageIcon.png')} style={styles.navImg} />
-                        {tutorialStep == 0 && <Image source={require('../assets/images/tooltip.png')} style={styles.tooltip} />}
-                    </TouchableOpacity>
+                            return (
+                                <View key={category}>
+                                    {/* Category */}
+                                    <TouchableOpacity
+                                        onPress={() => {
+                                            setSelectedCategory(category);
+                                            setSelectedSubCategory("");
+                                        }}
+                                        style={[
+                                            styles.categoryListItem,
+                                            isSelectedCategory && { backgroundColor: "#0d4527" },
+                                        ]}
+                                    >
+                                        <Text
+                                            style={[
+                                                styles.categoryListItemText,
+                                                isSelectedCategory && { color: "#fff" },
+                                            ]}
+                                        >
+                                            {category}
+                                        </Text>
+                                    </TouchableOpacity>
 
-                    <TouchableOpacity style={styles.navbarCTA} onPress={() => router.push('/listing')}>
-                        <Image source={require('../assets/images/browsePageIcon.png')} style={styles.navImg} />
-                        {tutorialStep == 1 && <Image source={require('../assets/images/tooltip.png')} style={styles.tooltip} />}
-                    </TouchableOpacity>
+                                    {/* Subcategories */}
+                                    {subCategories.length > 0 &&
+                                        subCategories.map((sub, index) => {
+                                            const isSelectedSub =
+                                                selectedCategory === category && selectedSubCategory === sub;
+                                            const isLast = index == subCategories.length - 1
 
-                    <TouchableOpacity style={styles.navbarCTA} onPress={() => router.push('/')}>
-                        <Image source={require('../assets/images/cartPageIcon.png')} style={styles.navImg} />
-                        {tutorialStep == 2 && <Image source={require('../assets/images/tooltip.png')} style={styles.tooltip} />}
-                    </TouchableOpacity>
+                                            return (
+                                                <TouchableOpacity
+                                                    key={sub}
+                                                    onPress={() => {
+                                                        setSelectedCategory(category);
+                                                        setSelectedSubCategory(sub);
+                                                    }}
+                                                    style={[
+                                                        styles.subCategoryListItem,
+                                                        isLast && { marginBottom: 20 },
+                                                        isSelectedSub && { backgroundColor: "#0d4527" },
+                                                    ]}
+                                                >
+                                                    <Text
+                                                        style={[
+                                                            styles.subCategoryListItemText,
+                                                            isSelectedSub && { color: "#fff" },
+                                                        ]}
+                                                    >
+                                                        {sub}
+                                                    </Text>
+                                                </TouchableOpacity>
+                                            );
+                                        })}
+                                </View>
+                            );
+                        })}
+                    </BottomSheetScrollView>
 
-                    <TouchableOpacity style={styles.navbarCTA} onPress={() => router.push('/')}>
-                        <Image source={require('../assets/images/profilePageIcon.png')} style={styles.navImg} />
-                        {tutorialStep == 3 && <Image source={require('../assets/images/tooltip.png')} style={styles.tooltip} />}
-                    </TouchableOpacity>
-                </View>
+                </BottomSheet>
 
-                {tutorialStep < 4 && <View style={styles.tutorial}>
-                    {tutorialStep == 0 && <Text style={styles.tutorialText}>
-                        The screen where you can chat with me
-                    </Text>}
-                    {tutorialStep == 1 && <Text style={styles.tutorialText}>
-                        Shopping page where you can search manually for products
-                    </Text>}
-                    {tutorialStep == 2 && <Text style={styles.tutorialText}>
-                        The standard cart where you can also see product recommendations
-                    </Text>}
-                    {tutorialStep == 3 && <Text style={styles.tutorialText}>
-                        Profile with all your settings
-                    </Text>}
-
-                    <View style={styles.tutorialActions}>
-                        <TouchableOpacity onPress={() => { handleSkipTutorial() }}>
-                            <Text style={styles.tutorialCTAText}>Skip</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={styles.tutorialCTA} onPress={() => { handleNextTutorialStep() }}>
-                            <Text style={styles.tutorialCTAPrimaryText}>Next</Text>
-                        </TouchableOpacity>
-                    </View>
-                </View>}
-            </View>
-
-
-        </KeyboardAvoidingView >
+                
+            </KeyboardAvoidingView >
+        </GestureHandlerRootView>
     );
 }
 
@@ -372,8 +549,8 @@ const styling = (colorScheme: string) => {
             alignItems: 'center',
             backgroundColor: colorScheme === 'dark' ? '#1E1E1E' : '#fff',
             marginBottom: 10,
-            position:'relative',
-            zIndex:1
+            position: 'relative',
+            zIndex: 1
         },
         back: {
             width: 11,
@@ -427,7 +604,6 @@ const styling = (colorScheme: string) => {
             shadowRadius: 5,
             // Android
             elevation: 2,
-            zIndex:1
         },
         searchIcon: {
             position: 'absolute',
@@ -438,12 +614,12 @@ const styling = (colorScheme: string) => {
         },
 
         filterBar: {
-            paddingHorizontal: 40,
+            paddingHorizontal: 20,
         },
         filterCTA: {
             flexDirection: 'row',
             alignItems: 'center',
-            gap: 15,
+            gap: 5,
         },
         filterCTAText: {
             color: colorScheme === 'dark' ? '#fff' : '#707070',
@@ -537,6 +713,117 @@ const styling = (colorScheme: string) => {
             bottom: -20,
             top: 'auto',
             left: 0,
+        },
+        modal: {
+            backgroundColor: colorScheme === 'dark' ? '#111827' : '#f4f3e9',
+        },
+        modalHandle: {
+            width: 70,
+            backgroundColor: colorScheme === 'dark' ? '#2c3854' : '#D9D9D9',
+        },
+        modalHeader: {
+            flexDirection: 'row',
+            justifyContent: 'center',
+            alignItems: 'center',
+            paddingHorizontal: 15,
+            paddingBottom: 15,
+            // borderBottomWidth: 1,
+            borderColor: colorScheme === 'dark' ? '#1a253d' : '#e4e4e4',
+            color: colorScheme === 'dark' ? '#fff' : '#eee',
+        },
+        modalTitle: {
+            fontSize: 16,
+            fontFamily: 'Avenir',
+            color: colorScheme === 'dark' ? '#fff' : '#000',
+
+        },
+        modalClose: {
+            padding: 5,
+            borderWidth: 1,
+            borderRadius: 20,
+            borderColor: colorScheme === 'dark' ? '#2c3854' : '#000',
+        },
+        modalScrollView: {
+            paddingHorizontal: 15,
+            paddingBottom: 130
+            // marginTop: 50,
+            // borderWidth: 1
+        },
+        filterListItem: {
+            marginBottom: 15,
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center'
+        },
+        filterListItemText: {
+            fontFamily: 'Avenir',
+            fontSize: 16,
+            color: '#000'
+        },
+        categoryListItem: {
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            paddingHorizontal: 20,
+        },
+        categoryListItemText: {
+            fontFamily: 'Avenir',
+            fontSize: 16,
+            color: '#000'
+        },
+        subCategoryListItem: {
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            paddingHorizontal: 40,
+            paddingVertical: 5
+        },
+        subCategoryListItemText: {
+            fontFamily: 'Avenir',
+            fontSize: 16,
+            color: '#000',
+            opacity:0.6
+        },
+        sortingListItem: {
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            paddingHorizontal: 20,
+            paddingVertical: 10
+        },
+        sortingListItemText: {
+            fontFamily: 'Avenir',
+            fontSize: 16,
+            color: '#000'
+        },
+        radio: {
+            width: 22,
+            height: 22,
+            borderWidth: 1,
+            borderColor: '#707070',
+            borderRadius: 30,
+            justifyContent: 'center',
+            alignItems: 'center'
+        },
+        radioImg: {
+            width: 12,
+            height: 12,
+            objectFit: 'contain'
+        },
+        modalButton: {
+            backgroundColor: '#155935',
+            paddingVertical: 15,
+            borderRadius: 30,
+            alignItems: 'center',
+            marginTop: 10,
+            flexDirection: 'row',
+            justifyContent: 'center',
+            gap: 15
+        },
+        modalButtonText: {
+            fontFamily: 'Avenir',
+            fontSize: 16,
+            color: '#fff'
         },
     });
 };

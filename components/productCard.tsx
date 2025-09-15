@@ -13,11 +13,11 @@ export default function productCard({ product }) {
     }
 
     const handleProductClick = (productid: string) => {
-        console.log('Product ' + productid + ' liked')
+        console.log('go to details ' + productid)
     }
 
     const handleAddProduct = (productid: string) => {
-        console.log('Product ' + productid + ' liked')
+        console.log('Product Added ' + productid )
     }
 
     return (
@@ -61,6 +61,7 @@ const styling = (colorScheme: string) =>
             shadowRadius: 5,
             // Android
             elevation: 2,
+            overflow:'hidden'
         },
         content: {
             flex: 1,
