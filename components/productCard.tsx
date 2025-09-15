@@ -1,10 +1,12 @@
 import Feather from '@expo/vector-icons/Feather';
+import { useRouter } from 'expo-router';
 import React from 'react';
 import { Dimensions, Image, StyleSheet, Text, TouchableOpacity, useColorScheme, View } from 'react-native';
 
 const { width } = Dimensions.get('window');
 
 export default function productCard({ product }) {
+    const router = useRouter();
     let colorScheme = useColorScheme();
     const styles = styling(colorScheme);
 
@@ -13,11 +15,14 @@ export default function productCard({ product }) {
     }
 
     const handleProductClick = (productid: string) => {
-        console.log('go to details ' + productid)
+        router.push({
+            pathname: "/details",
+            params: { id: productid },
+        });
     }
 
     const handleAddProduct = (productid: string) => {
-        console.log('Product Added ' + productid )
+        console.log('Product Added ' + productid)
     }
 
     return (
@@ -39,7 +44,7 @@ export default function productCard({ product }) {
                 </TouchableOpacity>
 
                 <View style={styles.cardFooter}>
-                    <TouchableOpacity onPress={()=>{handleAddProduct(product._id)}} style={styles.cardCTA}>
+                    <TouchableOpacity onPress={() => { handleAddProduct(product._id) }} style={styles.cardCTA}>
                         <Text style={styles.cardCTAText}>Add</Text>
                     </TouchableOpacity>
                 </View>
@@ -61,7 +66,7 @@ const styling = (colorScheme: string) =>
             shadowRadius: 5,
             // Android
             elevation: 2,
-            overflow:'hidden'
+            overflow: 'hidden'
         },
         content: {
             flex: 1,

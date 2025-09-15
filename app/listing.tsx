@@ -139,7 +139,7 @@ export default function ListingScreen() {
         const queryParams = new URLSearchParams();
 
         if (searchKeyword) queryParams.append("q", searchKeyword);
-        if (selectedBrands.length>0) queryParams.append("brand", selectedBrands.join(","));
+        if (selectedBrands.length > 0) queryParams.append("brand", selectedBrands.join(","));
 
         if (sortBy) {
             queryParams.append("sortBy", sortBy.replace(":", "").replaceAll(" ", ""));
@@ -861,7 +861,7 @@ const styling = (colorScheme: string) => {
             fontFamily: 'Avenir',
             fontSize: 16,
             color: '#000',
-            opacity:0.6
+            opacity: 0.6
         },
         sortingListItem: {
             flexDirection: 'row',
